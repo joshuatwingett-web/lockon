@@ -1,0 +1,34 @@
+name: Publish verified v0.9.7 installers
+on:
+  workflow_dispatch:
+    inputs:
+      intel_url:
+        description: Temporary download URL for the validated Intel installer
+        required: true
+        type: string
+      windows_url:
+        description: Temporary download URL for the validated Windows installer
+        required: true
+        type: string
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Download and verify installers
+        env:
+          INTEL_URL: ${{ inputs.intel_url }}
+          WINDOWS_URL: ${{ inputs.windows_url }}
+        run: |
+          echo "::add-mask::$INTEL_URL"
+          echo "::add-mask::$WINDOWS_URL"
+          curl --fail --silent --show-error --location --retry 3 "$INTEL_URL" -o Lock-On-v0.9.7-mac-intel.zip
+          curl --fail --silent --show-error --location --retry 3 "$WINDOWS_URL" -o Lock-On-v0.9.7-windows.zip
+          echo '71dae17cd0818eeceb3af40171919b814549ec1e83fc560b271f5918822024aa  Lock-On-v0.9.7-mac-intel.zip' | sha256sum --check
+          echo '3cb7f2e4032c8bf93f631498f49f26af36402ac0e7af1d4e163dc68a97130502  Lock-On-v0.9.7-windows.zip' | sha256sum --check
+      - name: Publish verified installers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload v0.9.7 Lock-On-v0.9.7-mac-intel.zip Lock-On-v0.9.7-windows.zip --repo joshuatwingett-web/lockon --clobber
